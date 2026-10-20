@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HON-NEo（ホンネヲ）全5種 診断ツール統合プロトタイプ</title>
+  <style>
+    :root {
+      --primary: #2d5a43;
+      --primary-light: #e8f0eb;
+      --primary-hover: #214332;
+      --accent: #d4a373;
+      --accent-soft: #faedcd;
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --text: #2c302e;
+      --text-muted: #6b7280;
+      --border: #e3ded6;
+      --shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    }
+
+    body {
+      background-color: #e9e5dc;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .device-frame {
+      width: 100%;
+      max-width: 440px;
+      height: 860px;
+      max-height: 96vh;
+      background: var(--bg);
+      border-radius: 40px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border: 9px solid #1f2421;
+    }
+
+    /* スマホ上部ノッチ */
+    .notch {
+      width: 130px;
+      height: 20px;
+      background: #1f2421;
+      margin: 0 auto;
+      border-radius: 0 0 14px 14px;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+
+    /* ヘッダー */
+    header {
+      padding: 10px 14px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .brand-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--primary);
+    }
+
+    .brand-sub {
+      font-size: 10.5px;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    /* 診断切り替えエリア（折り返し＋セレクト併用で確実に全部選べるUI） */
+    .selector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .selector-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+
+    .mode-select-dropdown {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      background: #fdfbf7;
+      border: 1px solid var(--accent);
+      padding: 2px 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* 2段折り返しボタングループ（5個すべて常に見える） */
+    .mode-button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      width: 100%;
+    }
+
+    .mode-tab-btn {
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: #faf8f5;
+      border-radius: 14px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      flex: 1 1 calc(33.333% - 5px);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .mode-tab-btn:nth-child(4),
+    .mode-tab-btn:nth-child(5) {
+      flex: 1 1 calc(50% - 5px);
+    }
+
+    .mode-tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 6px rgba(45, 90, 67, 0.25);
+    }
+
+    /* メインコンテンツエリア */
+    .content-area {
+      flex: 1;
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* プログレスバー */
+    .progress-bar-container {
+      width: 100%;
+      height: 5px;
+      background: #e3ded6;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.35s ease;
+    }
+
+    /* 画面切り替え共通 */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      animation: fadeIn 0.25s ease;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* スタート画面 */
+    .start-screen {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 6px;
+      margin: auto 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 20px;
+    }
+
+    .title-large {
+      font-size: 19px;
+      font-weight: 800;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .description {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .btn-main {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 13px 30px;
+      font-size: 14.5px;
+      font-weight: 700;
+      border-radius: 30px;
+      cursor: pointer;
+      width: 100%;
+      max-width: 270px;
+      box-shadow: 0 4px 12px rgba(45, 90, 67, 0.25);
+      transition: all 0.2s;
+    }
+    .btn-main:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    /* 設問画面 */
+    .q-step {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .q-text {
+      font-size: 16.5px;
+      font-weight: 700;
+      line-height: 1.45;
+      margin-bottom: 18px;
+      color: var(--text);
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 13px 13px;
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+    .option-card:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    .option-card:active {
+      transform: scale(0.98);
+    }
+
+    .option-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ede9e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ローディング画面 */
+    .loading-screen {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin: auto 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 結果画面 */
+    .result-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+    }
+
+    .result-tag {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .result-type-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    /* メーター表示エリア（アイデア4・5用） */
+    .meter-box {
+      margin: 10px 0 14px;
+      padding: 12px;
+      background: #fbf9f5;
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+    }
+    .meter-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .meter-gauge-bg {
+      width: 100%;
+      height: 12px;
+      background: #e5e0d8;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+    }
+    .meter-gauge-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #d4a373, #2d5a43);
+      transition: width 0.8s ease;
+    }
+
+    .result-desc {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 12px;
+      background: #faf8f4;
+      padding: 12px;
+      border-radius: 12px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .result-advice {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #4b5563;
+    }
+
+    .action-box {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      font-size: 13.5px;
+      font-weight: 700;
+      border-radius: 30px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #c29161;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      font-size: 12px;
+      border-radius: 30px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-outline:hover {
+      background: #f5f2eb;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="device-frame">
+    <div class="notch"></div>
+
+    <header>
+      <div class="brand-bar">
+        <div class="brand-title">HON-NEo ｜ ホンネヲ</div>
+        <div class="brand-sub" id="brandSubTag">Phase 1：LINE登録</div>
+      </div>
+      
+      <div class="selector-header">
+        <div class="selector-label">診断ツールの切り替え（全5種）:</div>
+        <select class="mode-select-dropdown" id="modeSelect" onchange="switchMode(this.value)">
+          <option value="mode1">① 本音の迷子度</option>
+          <option value="mode2">② 3つのブレーキ</option>
+          <option value="mode3">③ 3 Compass原石</option>
+          <option value="mode4">④ いい人度メーター</option>
+          <option value="mode5">⑤ エネルギー漏電</option>
+        </select>
+      </div>
+
+      <!-- 2段構成の全5個ボタン（見切れず確実にクリックできる） -->
+      <div class="mode-button-grid" id="modeButtons">
+        <button class="mode-tab-btn active" data-mode="mode1" onclick="switchMode('mode1')">① 本音の迷子度</button>
+        <button class="mode-tab-btn" data-mode="mode2" onclick="switchMode('mode2')">② 3つのブレーキ</button>
+        <button class="mode-tab-btn" data-mode="mode3" onclick="switchMode('mode3')">③ 3 Compass原石</button>
+        <button class="mode-tab-btn" data-mode="mode4" onclick="switchMode('mode4')">④ いい人度メーター</button>
+        <button class="mode-tab-btn" data-mode="mode5" onclick="switchMode('mode5')">⑤ エネルギー漏電</button>
+      </div>
+    </header>
+
+    <div class="content-area">
+      <!-- プログレスバー -->
+      <div class="progress-bar-container" id="progressBarContainer" style="display: none;">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+
+      <!-- スタート画面 -->
+      <div class="screen active" id="startScreen">
+        <div class="start-screen">
+          <span class="badge" id="startBadge">LINE読者限定 30秒診断</span>
+          <h1 class="title-large" id="startTitle">あなたの本音の迷子度＆<br>お疲れタイプ診断</h1>
+          <p class="description" id="startDesc">
+            他人の期待や「ちゃんとしなきゃ」に応えすぎて、<br>
+            自分の本当の声が迷子になっていませんか？<br>
+            4つの質問であなたの現在地を可視化します。
+          </p>
+          <button class="btn-main" onclick="startQuiz()">診断をスタートする</button>
+        </div>
+      </div>
+
+      <!-- 質問画面 -->
+      <div class="screen" id="quizScreen">
+        <div class="q-step" id="qStep">QUESTION 1 / 4</div>
+        <div class="q-text" id="qText">質問内容</div>
+        <div class="options-list" id="optionsContainer"></div>
+      </div>
+
+      <!-- ローディング画面 -->
+      <div class="screen loading-screen" id="loadingScreen">
+        <div class="spinner"></div>
+        <div style="font-weight: 700; font-size: 14.5px; color: var(--primary);" id="loadingMsg">
+          本音の周波数を解析中...
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted);">
+          少々お待ちください
+        </div>
+      </div>
+
+      <!-- 結果画面 -->
+      <div class="screen" id="resultScreen">
+        <div class="result-container">
+          <div class="result-tag" id="resultTag">DIAGNOSIS RESULT</div>
+          <h2 class="result-type-title" id="resultTitle">診断タイプ名</h2>
+          
+          <!-- メーター演出用エリア -->
+          <div id="meterContainer" style="display: none;"></div>
+
+          <div class="result-desc" id="resultDesc">タイプ解説文</div>
+          <div class="result-advice" id="resultAdvice">本音を取り戻すための処方箋</div>
+        </div>
+
+        <div class="action-box">
+          <button class="btn-secondary" id="resultActionBtn" onclick="handleActionClick()">
+            📩 処方箋アクションを受け取る
+          </button>
+          <button class="btn-outline" onclick="resetQuiz()">
+            ↺ もう一度診断する
+          </button>
+        </div>
+        <div class="footer-note" id="footerNote">
+          ※UTAGEメール統合フォームまたは体験会申込へ接続
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const diagnosisCatalog = {
+      mode1: {
+        phase: "Phase 1：LINE登録直後",
+        badge: "LINE友だち限定 30秒診断",
+        title: "あなたの本音の迷子度＆<br>お疲れタイプ診断",
+        desc: "他人の期待や「ちゃんとしなきゃ」に応えすぎて、自分の本当の声が迷子になっていませんか？4つの問いであなたの現在地を明らかにします。",
+        actionText: "📩 このタイプの処方箋レター（メルマガ）を受け取る",
+        footer: "※UTAGEメールフォームへ自動統合（シナリオ01）",
+        loadingText: "心の疲労度と本音の深度を解析中...",
+        questions: [
+          {
+            question: "今、一番無条件に欲しいものは何ですか？",
+            options: [
+              { text: "誰にも邪魔されない、1人きりの自由な時間", type: "antenna" },
+              { text: "「もう頑張らなくていいよ」という許可と休息", type: "armor" },
+              { text: "これからの人生を迷わず選べる「明確な正解」", type: "freeze" },
+              { text: "溜め込んだモヤモヤや愚痴を全部吐き出せる場所", type: "magma" }
+            ]
+          },
+          {
+            question: "気乗りしない頼まれごとをされたときの最初の反応は？",
+            options: [
+              { text: "断れずに笑顔で引き受け、後で一人ため息をつく", type: "armor" },
+              { text: "相手の機嫌や関係性が壊れるのが怖くて断れない", type: "antenna" },
+              { text: "嫌なのかどうかもよく分からず、機械的に受けてしまう", type: "freeze" },
+              { text: "表面は受けつつ、内心「なんで私ばっかり…」とイラつく", type: "magma" }
+            ]
+          },
+          {
+            question: "最近、一番深いため息が出たのはどんな瞬間でしたか？",
+            options: [
+              { text: "周りに気を遣いすぎて、帰宅した瞬間にドッと疲れたとき", type: "antenna" },
+              { text: "期待に応えようと頑張ったのに、当たり前のように扱われたとき", type: "armor" },
+              { text: "「私、何のために毎日働いてるんだっけ？」と虚しくなったとき", type: "freeze" },
+              { text: "言いたい正論や本音を喉元でグッと飲み込んだとき", type: "magma" }
+            ]
+          },
+          {
+            question: "「あなたの本音は何？」と聞かれたら、どう感じますか？",
+            options: [
+              { text: "「本音を言ったらワガママと思われるかも…」と口ごもる", type: "antenna" },
+              { text: "「誰かの役に立てているならそれでいい」と答えてしまう", type: "armor" },
+              { text: "正直、自分でも何が本音なのか本当にわからない", type: "freeze" },
+              { text: "溢れ出したら止まらない気がして、あえて蓋をしている", type: "magma" }
+            ]
+          }
+        ],
+        results: {
+          armor: {
+            title: "【優等生の鎧】タイプ<br>（期待に応えすぎてエネルギー切れ）",
+            desc: "責任感が強く、周囲の期待を裏切らないように走り続けてきたあなた。周囲からの信頼は厚い反面、心の中では『もう疲れた…』とSOSが出ている状態です。",
+            advice: "💡 処方箋: あなたに必要なのは努力ではなく「脱力」。まずは1日5分だけ、『何もしない・誰の期待にも応えない時間』を死守することから始めましょう。"
+          },
+          freeze: {
+            title: "【感情フリーズ】タイプ<br>（我慢の麻痺で本音のセンサーが休眠中）",
+            desc: "長い間、常識や正論に合わせてきた結果、自分の『好き・嫌い・快・不快』の感覚自体がフリーズ（一時停止）してしまっています。",
+            advice: "💡 処方箋: 今日のランチや珈琲を選ぶとき、『どっちが正しいか』ではなく『どっちが今キュンとするか』だけで選ぶリハビリを。"
+          },
+          antenna: {
+            title: "【他人軸アンテナ】タイプ<br>（周りの空気を拾いすぎて電波混線）",
+            desc: "共感力が高く優しいあまり、常に周囲の顔色や空気を敏感にキャッチしてしまい、自分の本音の電波が圏外になってしまっています。",
+            advice: "💡 処方箋: 他人の気持ちを察するアンテナを少し畳みましょう。『相手がどう思うか』ではなく『私はどうしたいか』を1日1回ノートに書いてみてください。"
+          },
+          magma: {
+            title: "【マグマ抱え込み】タイプ<br>（飲み込んだ本音と怒りが蓄積中）",
+            desc: "本当は強い意志や美学、明確な違和感を持っているのに、和を乱さないためにグッと飲み込んでいませんか？その情熱が内側でくすぶっています。",
+            advice: "💡 処方箋: そのモヤモヤは情熱の裏返し。誰にも見せない紙に、綺麗な言葉を使わず本音をすべて書き殴ってみてください。"
+          }
+        }
+      },
+
+      mode2: {
+        phase: "Phase 2：体験会接続",
+        badge: "原因特定ワーク（3問）",
+        title: "あなたの本音を縛る<br>「3つのブレーキ（無意識の呪い）」診断",
+        desc: "なぜ本音で生きられないのか？あなたの足を止めている『無意識のブレーキ』を特定し、解除のヒントを見つけます。",
+        actionText: "🔓 ブレーキを外す「3 Compass体験会」へ参加する",
+        footer: "※体験会申込（シナリオ02）へ接続",
+        loadingText: "無意識のブロックをスキャン中...",
+        questions: [
+          {
+            question: "人から感謝されたり褒められたとき、咄嗟に浮かぶ感情は？",
+            options: [
+              { text: "「これくらい当然。もっと完璧にやらなきゃ」と自分を追い込む", type: "perfect" },
+              { text: "「本音をさらけ出したら、きっと失望されて人が離れていく」", type: "harmony" },
+              { text: "「私のことはいいから、相手が喜んでくれたならそれで満足」", type: "sacrifice" }
+            ]
+          },
+          {
+            question: "「これを失ったら人生終わり」と感じる最も強い恐れは？",
+            options: [
+              { text: "「能力がない」「ちゃんとしていない」と思われること", type: "perfect" },
+              { text: "周囲から嫌われ、居場所や味方がいなくなること", type: "harmony" },
+              { text: "「自分のことばかり考えて冷たい人だ」と非難されること", type: "sacrifice" }
+            ]
+          },
+          {
+            question: "本当は言いたい本音をグッと飲み込む一番の理由は？",
+            options: [
+              { text: "100%筋の通った完璧な提案がまだできていないから", type: "perfect" },
+              { text: "場の空気や調和を乱してギクシャクするのが怖いから", type: "harmony" },
+              { text: "私が少し我慢すれば、みんなが丸く収まるから", type: "sacrifice" }
+            ]
+          }
+        ],
+        results: {
+          perfect: {
+            title: "【完璧主義の呪い】ブレーキ<br>「完璧でない私には価値がない」",
+            desc: "『ちゃんとしなきゃ』という高い基準で自分を縛り、合格点を出せない自分を責めていませんか？このブレーキは挑戦と本音の表出を極端に遅らせます。",
+            advice: "🔓 解除の鍵: 70点の自分にOKを出すこと。人生の基準を『世間の満点』から『自分の心地よさ』に切り替える『3 Compass』が必要です。"
+          },
+          harmony: {
+            title: "【愛され・調和の呪い】ブレーキ<br>「本音を言ったら嫌われてしまう」",
+            desc: "人間関係の波風を恐れるあまり、自分の本音を消去して他人に合わせる癖がついています。好かれているのは『都合の良い自分』という孤独感を抱えがちです。",
+            advice: "🔓 解除の鍵: 本音を言っても崩れない関係だけを残す勇気。あなたが本音で語った時にこそ、本当に響き合う仲間が集まります。"
+          },
+          sacrifice: {
+            title: "【自己犠牲の呪い】ブレーキ<br>「私の気持ちより、周りの平和が優先」",
+            desc: "『誰かの役に立たなければ愛されない』という思い込みから、無意識に自分を後回しにしています。尽くしすぎて心がガス欠を起こしています。",
+            advice: "🔓 解除の鍵: 自分のコップを先に満たすこと。自分が満たされて溢れた分だけで人を愛する生き方にシフトしましょう。"
+          }
+        }
+      },
+
+      mode3: {
+        phase: "Phase 2：商品・体験直結",
+        badge: "未来志向ワーク",
+        title: "あなたの人生を導く<br>「3 Compass（選択軸）」原石診断",
+        desc: "他人の基準ではなく、自分の本音から人生を選ぶための羅針盤。<br>あなたの奥底に眠る『1つ目のコンパス』を見つけ出します。",
+        actionText: "🧭 残り2つの軸を揃える「3 Compass無料体験会」へ",
+        footer: "※シナリオ02『3 Compass無料体験会』へ接続",
+        loadingText: "あなたの人生のコンパスを測定中...",
+        questions: [
+          {
+            question: "子どもの頃、時間を忘れて夢中になっていたのはどんなこと？",
+            options: [
+              { text: "絵を描く、本を読む、空想するなど自分の世界に浸る", type: "aesthetic" },
+              { text: "友達とおしゃべりしたり、誰かと秘密を共有すること", type: "resonance" },
+              { text: "知らない路地を探検したり、新しいルールを発明すること", type: "freedom" },
+              { text: "散歩をしたり、日向ぼっこをしたり、穏やかに過ごすこと", type: "harmony" }
+            ]
+          },
+          {
+            question: "人から言われて、一番心の奥がジーンと満たされる言葉は？",
+            options: [
+              { text: "「あなたの世界観や感性、本当に独特で素敵だね」", type: "aesthetic" },
+              { text: "「あなたに話すと、心の荷物が降りてホッとするよ」", type: "resonance" },
+              { text: "「いつも自由に軽やかに、自分らしい道を切り開いてるね」", type: "freedom" },
+              { text: "「あなたと一緒にいると、なぜか安心していられるよ」", type: "harmony" }
+            ]
+          },
+          {
+            question: "もし人生で「絶対に譲れないもの」を1つだけ選ぶなら？",
+            options: [
+              { text: "自分の美学・妥協しないこだわり", type: "aesthetic" },
+              { text: "心から深く通じ合える、温度のある人間関係", type: "resonance" },
+              { text: "誰にも縛られず、自分の意志で選べる自由", type: "freedom" },
+              { text: "静けさと安心感、波風の立たない穏やかな日常", type: "harmony" }
+            ]
+          }
+        ],
+        results: {
+          aesthetic: {
+            title: "【感性・美学コンパス】の原石<br>〜妥協なき美意識で世界を切り取る〜",
+            desc: "あなたを動かす本当のエンジンは『美意識・感性』です。損得や世間の正解ではなく、自分が『美しいと感じるか』がすべての判断基準になります。",
+            advice: "🧭 3 Compassの視点: あなたの1つ目の軸は『感性』。これに『行動軸』と『関係軸』の2つのコンパスを組み合わせることで、ブレない人生の選択が完成します。"
+          },
+          resonance: {
+            title: "【共鳴・絆コンパス】の原石<br>〜深い心の通い合いが命を灯す〜",
+            desc: "あなたの人生のコンパスの中心にあるのは『魂の共鳴』です。表面的な数字や肩書きではなく、人と人が心を開いて繋がる瞬間に最大の力を発揮します。",
+            advice: "🧭 3 Compassの視点: 優しさゆえに他人に振り回されないよう、あなた自身を守る『境界線のコンパス』を体験会で見つけていきましょう。"
+          },
+          freedom: {
+            title: "【自由・探求コンパス】の原石<br>〜枠組みを越えて未知の地平へ〜",
+            desc: "決められたレールや既存の枠組みに押し込められると窒息してしまうタイプ。未知なる世界を探求し、軽やかに試行錯誤することに生命が宿ります。",
+            advice: "🧭 3 Compassの視点: 自由であり続けるためには、自分の『絶対的な核』が必要です。体験会であなたのブレない芯を言語化しましょう。"
+          },
+          harmony: {
+            title: "【静寂・調和コンパス】の原石<br>〜穏やかな安心感と余白を創り出す〜",
+            desc: "騒がしい競争や自己顕示よりも、穏やかな調和と心地よい余白を何よりも愛するあなた。その静けさは周囲を包み込む大きなギフトです。",
+            advice: "🧭 3 Compassの視点: 争いを避けるあまり自分の本音を引っ込めないよう、静かに自分を貫くコンパスを揃えていきましょう。"
+          }
+        }
+      },
+
+      mode4: {
+        phase: "Phase 3：SNS拡散・エンタメ",
+        badge: "日常あるあるシチュエーション診断",
+        title: "いい人度 vs ホンネ度メーター診断<br>（あなたの建前すり減り度チェック）",
+        desc: "日常のリアルな場面で、あなたはどれくらい『いい人の仮面』を被っている？30秒で建前のすり減り具合をメーター測定します。",
+        actionText: "🎁 いい人のまま本音を伝える処方箋をもらう",
+        footer: "※結果をSNSでシェアしてLINE登録へ誘導",
+        loadingText: "建前と本音のバランスを計算中...",
+        questions: [
+          {
+            question: "本当は帰りたいのに、乗り気でない2次会に誘われたら？",
+            options: [
+              { text: "「行きます！」と笑顔で参加し、翌朝激しく後悔する", score: 20 },
+              { text: "「ちょっと明日早くて…」と無難な嘘の理由を作って断る", score: 50 },
+              { text: "「今日は帰ってゆっくりしたいのでパスします！」と即答する", score: 85 }
+            ]
+          },
+          {
+            question: "職場の会議で、明らかにズレていると感じる意見が出たら？",
+            options: [
+              { text: "うなずいて同調し、後で心の中で突っ込む", score: 20 },
+              { text: "オブラートに10重くらい包んで遠回しに伝える", score: 55 },
+              { text: "「私はこう思うのですが、どうでしょうか？」と率直に切り出す", score: 90 }
+            ]
+          },
+          {
+            question: "友人から長文のネガティブ愚痴LINEが送られてきたら？",
+            options: [
+              { text: "自分の時間を削って長文の励まし返信をすぐ書く", score: 20 },
+              { text: "スタンプだけで濁すか、既読をつけて時間を置いてから返す", score: 60 },
+              { text: "「今はちょっと忙しいからまた今度ね！」と率直に伝える", score: 85 }
+            ]
+          }
+        ],
+        results: {
+          low: {
+            title: "ホンネ度 20%（いい人度 80%）<br>🚨 心のブレーカー寸前タイプ",
+            desc: "建前フル稼働！周囲からの評価は抜群の『超いい人』ですが、自分の感情を押し殺しすぎて心のブレーカーが落ちる直前です。",
+            advice: "💡 処方箋: 『断る＝悪』ではありません。嫌われないためのイエスをやめて、自分の心を守る小さな『ノー』の練習を始めましょう。"
+          },
+          mid: {
+            title: "ホンネ度 55%（いい人度 45%）<br>💭 モヤモヤ燻製タイプ",
+            desc: "本音はあるし言いたいけれど、相手への配慮や空気が邪魔をして喉元で止まってしまう。一人になった後で悶々と反省会を開くタイプです。",
+            advice: "💡 処方箋: 角を立てずに本音を伝える技術（Iメッセージ）を身につければ、人間関係のストレスは半分以下になります。"
+          },
+          high: {
+            title: "ホンネ度 85%（いい人度 15%）<br>🌿 自分軸チャレンジャー",
+            desc: "自分の感情に素直で、無駄な建前を嫌うタイプ。すでに本音で生きるベースは整っていますが、時に周囲との温度差に孤独を感じることも。",
+            advice: "💡 処方箋: あなたの本音に共鳴する人たちが集まるコミュニティを見つけることで、さらに軽やかに生きられるようになります。"
+          }
+        }
+      },
+
+      mode5: {
+        phase: "Phase 3：日常配信・メルマガ",
+        badge: "疲弊特定クイック診断",
+        title: "心のエネルギー漏電チェッカー<br>〜あなたの気力はどこから漏れている？〜",
+        desc: "「最近やる気が出ない」「常に疲れている」のはあなたの怠慢ではなく、エネルギーがどこかで漏電しているサインです。",
+        actionText: "🔋 漏電を止める「選択軸」のつくり方を見る",
+        footer: "※木曜HON-NEo LETTER・月曜LINE連動",
+        loadingText: "心のバッテリー残量を測定中...",
+        questions: [
+          {
+            question: "夜、ベッドに入って電気を消したとき、頭の中はどうなっている？",
+            options: [
+              { text: "明日のタスクや仕事の段取りがグルグル巡って眠れない", type: "brain" },
+              { text: "今日言われた一言や、誰かの表情がフラッシュバックする", type: "emotion" },
+              { text: "「このままでいいのかな…」と答えのない選択に迷う", type: "decision" }
+            ]
+          },
+          {
+            question: "無意識にスマホを長時間ダラダラ見てしまうときの心理は？",
+            options: [
+              { text: "脳がパンクして、何も考えずに刺激だけ流し込みたい", type: "brain" },
+              { text: "寂しさや満たされないモヤモヤを紛らわせたい", type: "emotion" },
+              { text: "決めなきゃいけない現実から目を背けて先送りしたい", type: "decision" }
+            ]
+          },
+          {
+            question: "一番エネルギーをごっそり奪われていると感じる原因は？",
+            options: [
+              { text: "終わりのないマルチタスク・膨大な情報量（インプット過多）", type: "brain" },
+              { text: "気を遣う人間関係・周囲の感情の受け取りすぎ", type: "emotion" },
+              { text: "「やるべきか、やめるべきか」決めきれない保留事項の山", type: "decision" }
+            ]
+          }
+        ],
+        results: {
+          brain: {
+            title: "【情報・タスク過多】による脳疲労漏電<br>バッテリー残量：25%",
+            desc: "頭の中にタブが何十個も開きっぱなしのブラウザ状態。情報やタスクのインプットが許容量を超え、脳がオーバーヒートしています。",
+            advice: "🔋 漏電防止策: 今すぐスマホを別室に置き、頭の中にあるタスクを全部紙に書き出して『今日はこれ以上考えない』と決めましょう。"
+          },
+          emotion: {
+            title: "【他人の感情受取すぎ】による共感漏電<br>バッテリー残量：20%",
+            desc: "他人の不機嫌やため息、期待の空気をスポンジのように吸い込んでしまい、感情のエネルギーが枯渇しています。",
+            advice: "🔋 漏電防止策: 『他人の機嫌は他人の課題』と線引きを。塩風呂に入ったり、1人の聖域時間を作って感情のデトックスを。"
+          },
+          decision: {
+            title: "【決断の先送り】による保留漏電<br>バッテリー残量：15%",
+            desc: "『どうしよう…』と結論を出せない保留事項が一番エネルギーを喰います。決断できない理由は、自分の中に『判断基準』がないからです。",
+            advice: "🔋 漏電防止策: 迷いを断ち切るには『3 Compass（自分だけの判断軸）』を持つこと。軸さえ決まれば、迷うエネルギーはゼロになります。"
+          }
+        }
+      }
+    };
+
+    let currentMode = "mode1";
+    let currentQIndex = 0;
+    let scores = {};
+    let totalScore = 0;
+
+    function switchMode(mode) {
+      currentMode = mode;
+
+      // ボタンのアクティブクラス更新
+      document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // セレクトボックスの同期
+      const selectEl = document.getElementById("modeSelect");
+      if (selectEl) {
+        selectEl.value = mode;
+      }
+
+      resetQuiz();
+    }
+
+    function resetQuiz() {
+      currentQIndex = 0;
+      scores = {};
+      totalScore = 0;
+      const data = diagnosisCatalog[currentMode];
+      
+      document.getElementById("brandSubTag").innerText = data.phase;
+      document.getElementById("startBadge").innerText = data.badge;
+      document.getElementById("startTitle").innerHTML = data.title;
+      document.getElementById("startDesc").innerHTML = data.desc;
+      document.getElementById("resultActionBtn").innerText = data.actionText;
+      document.getElementById("footerNote").innerText = data.footer;
+      document.getElementById("loadingMsg").innerText = data.loadingText;
+
+      document.getElementById("progressBarContainer").style.display = "none";
+      document.getElementById("meterContainer").style.display = "none";
+      showScreen("startScreen");
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function startQuiz() {
+      currentQIndex = 0;
+      scores = {};
+      totalScore = 0;
+      document.getElementById("progressBarContainer").style.display = "block";
+      showQuestion();
+      showScreen("quizScreen");
+    }
+
+    function showQuestion() {
+      const data = diagnosisCatalog[currentMode];
+      const q = data.questions[currentQIndex];
+      const total = data.questions.length;
+
+      document.getElementById("qStep").innerText = `QUESTION ${currentQIndex + 1} / ${total}`;
+      document.getElementById("qText").innerText = q.question;
+      document.getElementById("progressBar").style.width = `${((currentQIndex) / total) * 100}%`;
+
+      const container = document.getElementById("optionsContainer");
+      container.innerHTML = "";
+
+      q.options.forEach((opt, idx) => {
+        const card = document.createElement("div");
+        card.className = "option-card";
+        card.innerHTML = `
+          <div class="option-num">${idx + 1}</div>
+          <div>${opt.text}</div>
+        `;
+        card.onclick = () => selectOption(opt);
+        container.appendChild(card);
+      });
+    }
+
+    function selectOption(opt) {
+      if (opt.type) {
+        scores[opt.type] = (scores[opt.type] || 0) + 1;
+      }
+      if (opt.score !== undefined) {
+        totalScore += opt.score;
+      }
+
+      currentQIndex++;
+      const data = diagnosisCatalog[currentMode];
+
+      if (currentQIndex < data.questions.length) {
+        showQuestion();
+      } else {
+        document.getElementById("progressBar").style.width = `100%`;
+        showScreen("loadingScreen");
+        setTimeout(showResult, 850);
+      }
+    }
+
+    function showResult() {
+      const data = diagnosisCatalog[currentMode];
+      const meterBox = document.getElementById("meterContainer");
+      meterBox.style.display = "none";
+      meterBox.innerHTML = "";
+
+      let res;
+
+      if (currentMode === "mode4") {
+        const avgScore = Math.round(totalScore / data.questions.length);
+        if (avgScore < 40) res = data.results.low;
+        else if (avgScore < 75) res = data.results.mid;
+        else res = data.results.high;
+
+        meterBox.style.display = "block";
+        meterBox.innerHTML = `
+          <div class="meter-box">
+            <div class="meter-label-row">
+              <span>ホンネ度：<strong style="color:var(--primary); font-size:14px;">${avgScore}%</strong></span>
+              <span>いい人度：<strong style="color:var(--accent); font-size:14px;">${100 - avgScore}%</strong></span>
+            </div>
+            <div class="meter-gauge-bg">
+              <div class="meter-gauge-bar" style="width: ${avgScore}%;"></div>
+            </div>
+          </div>
+        `;
+      } 
+      else if (currentMode === "mode5") {
+        let topType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b, Object.keys(data.results)[0]);
+        res = data.results[topType];
+
+        let battery = topType === "brain" ? 25 : (topType === "emotion" ? 20 : 15);
+        meterBox.style.display = "block";
+        meterBox.innerHTML = `
+          <div class="meter-box">
+            <div class="meter-label-row">
+              <span>心のバッテリー残量</span>
+              <span style="color:#d9534f; font-weight:800;">残り ${battery}% (要充電)</span>
+            </div>
+            <div class="meter-gauge-bg">
+              <div class="meter-gauge-bar" style="width: ${battery}%; background:#d9534f;"></div>
+            </div>
+          </div>
+        `;
+      }
+      else {
+        let topType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b, Object.keys(data.results)[0]);
+        res = data.results[topType] || Object.values(data.results)[0];
+      }
+
+      document.getElementById("resultTitle").innerHTML = res.title;
+      document.getElementById("resultDesc").innerHTML = res.desc;
+      document.getElementById("resultAdvice").innerHTML = res.advice.replace(/\n/g, "<br>");
+
+      showScreen("resultScreen");
+    }
+
+    function handleActionClick() {
+      if (currentMode === "mode1") {
+        alert("【モック動作】\nUTAGEメールフォームへ遷移し、タイプ別解説レターを配信します。\n（LINEアカウントとメール情報が読者統合されます）");
+      } else if (currentMode === "mode2" || currentMode === "mode3") {
+        alert("【モック動作】\nUTAGEシナリオ02『3 Compass無料体験会』の申込ページへ遷移します。");
+      } else if (currentMode === "mode4") {
+        alert("【モック動作】\n結果カード画像を生成し、Instagramストーリーズへのシェアリンクを開きます。");
+      } else if (currentMode === "mode5") {
+        alert("【モック動作】\n木曜の定期メルマガ（HON-NEo LETTER）特設記事へ遷移します。");
+      }
+    }
+
+    resetQuiz();
+  </script>
+</body>
+</html>
